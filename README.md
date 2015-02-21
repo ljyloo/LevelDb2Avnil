@@ -7,16 +7,16 @@ This program uses leveldb by tinfoiled. See lisense here https://github.com/tinf
 
 This program contains code from Mojang: Source at https://mojang.com/2012/02/new-minecraft-map-format-anvil/
 
-Usage:
+## Usage:
 
-java -jar Converter.jar \<import folder\> \<export folder\>
+`java -jar Converter.jar <import folder> <export folder>`
 
-Where:
+## Where:
 
-\<import folder\> The full path to the folder containing Minecraft:Pocket Edition world
+`<import folder> The full path to the folder containing Minecraft:Pocket Edition world`
 
-\<export folder\> The full path to the folder which you want to export
+`<export folder> The full path to the folder which you want to export`
 
-Example:
+## Example:
 
-java -jar Converter.jar /home/ljyloo/import /home/ljyloo/export
+`java -jar Converter.jar /home/ljyloo/import /home/ljyloo/export`
