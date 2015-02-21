@@ -5,7 +5,7 @@ Map converter for Minecraft:Pocket Edition, from format "LevelDB" to "Anvil".
 
 This program uses leveldb by tinfoiled. See lisense here https://github.com/tinfoiled/leveldb
 
-This program contains code from Mojang: Source at
+This program contains code from Mojang: source at
 
 https://mojang.com/2012/02/new-minecraft-map-format-anvil/
 
