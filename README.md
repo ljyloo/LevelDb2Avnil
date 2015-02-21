@@ -5,13 +5,13 @@ Map converter for Minecraft:Pocket Edition, from format "LevelDB" to "Anvil".
 
 Usage:
 
-java -jar Converter.jar <import folder> <export folder>
+java -jar Converter.jar \<import folder\> \<export folder\>
 
 Where:
 
-<import folder> The full path to the folder containing Minecraft:Pocket Edition world
+\<import folder\> The full path to the folder containing Minecraft:Pocket Edition world
 
-<export folder> The full path to the folder which you want to export
+\<export folder\> The full path to the folder which you want to export
 
 Example:
 
