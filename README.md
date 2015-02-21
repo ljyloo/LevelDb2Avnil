@@ -3,6 +3,8 @@ A map converter for Minecraft: Pocket Edition
 
 Map converter for Minecraft:Pocket Edition, from format "LevelDB" to "Anvil".
 
+This program uses leveldb by tinfoiled. See lisense here https://github.com/tinfoiled/leveldb
+
 Usage:
 
 java -jar Converter.jar \<import folder\> \<export folder\>
