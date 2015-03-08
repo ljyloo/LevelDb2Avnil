@@ -31,7 +31,7 @@ public class PE2PC {
         
         File srcFolder;
         try {
-            srcFolder = new File(args[0]);
+            srcFolder = new File(args[0]+"/db");
             if (!srcFolder.exists()) {
                 throw new RuntimeException(args[0] + " doesn't exist");
             } else if (!srcFolder.isDirectory()) {
@@ -46,11 +46,11 @@ public class PE2PC {
         
         File desFolder;
         try {
-        	desFolder = new File(args[0]+"/db");
+        	desFolder = new File(args[1]);
             if (!desFolder.exists()) {
-                throw new RuntimeException(args[0] + " doesn't exist");
+                throw new RuntimeException(args[1] + " doesn't exist");
             } else if (!desFolder.isDirectory()) {
-                throw new RuntimeException(args[0] + " is not a folder");
+                throw new RuntimeException(args[1] + " is not a folder");
             }
         } catch (Exception e) {
             System.err.println("export folder problem: " + e.getMessage());
