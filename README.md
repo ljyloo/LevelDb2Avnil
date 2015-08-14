@@ -1,4 +1,4 @@
-# LevelDb2Avnil
+# LevelDb2Anvil
 A map converter for Minecraft: Pocket Edition
 
 Map converter for Minecraft:Pocket Edition, from format "LevelDB" to "Anvil".
