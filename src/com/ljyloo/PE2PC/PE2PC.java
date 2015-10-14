@@ -1,7 +1,7 @@
 package com.ljyloo.PE2PC;
 
+import org.apache.commons.io.filefilter.SuffixFileFilter;
 import org.iq80.leveldb.*;
-
 import com.mojang.nbt.CompoundTag;
 import com.mojang.nbt.ListTag;
 import com.mojang.nbt.NbtIo;
@@ -25,26 +25,38 @@ public class PE2PC {
 	
 	public static void main(String[] args) throws IOException {
 		//System.out.println((-1 % 32 + 32) % 32);
-        if (args.length != 2) {
+        if (args.length < 2 || args.length > 3) {
             printUsageAndExit();
         }
         
-        File srcFolder;
+        int type = 0;
+        if(args.length == 3){
+        	try{
+        		type = Integer.parseInt(args[2]);
+        		if(type != 0 && type != 1){
+        			System.err.println(type + " is not a valid type value");
+        			System.out.println("\n");
+        			printUsageAndExit();
+        		}
+        	}
+        	catch(NumberFormatException e){
+        		System.err.println(args[2] + " is not a valid type value");
+        		System.out.println("\n");
+        		printUsageAndExit();
+        	}
+        }
+        
+        //check import folder
         try {
-            srcFolder = new File(args[0]+"/db");
-            if (!srcFolder.exists()) {
-                throw new RuntimeException(args[0] + " doesn't exist");
-            } else if (!srcFolder.isDirectory()) {
-                throw new RuntimeException(args[0] + " is not a folder");
-            }
+            checkFolder(args[0], type);
         } catch (Exception e) {
-            System.err.println("import folder problem: " + e.getMessage());
-            System.out.println("");
+        	System.err.println("Failed to check folder \"" + args[0] + "\". Problem: " + e.getMessage());
+        	System.out.println("\n");
             printUsageAndExit();
-            return;
         }
         
-        File desFolder;
+        //check export folder
+        File desFolder = null;
         try {
         	desFolder = new File(args[1]);
             if (!desFolder.exists()) {
@@ -54,28 +66,82 @@ public class PE2PC {
             }
         } catch (Exception e) {
             System.err.println("export folder problem: " + e.getMessage());
-            System.out.println("");
+            System.out.println("\n");
             printUsageAndExit();
-            return;
         }
         
-		convert(srcFolder, desFolder);
+        if(type == 0){
+        	levelDB2Anvil(new File(args[0]), desFolder);
+        }
+        else{
+        	anvilToLevelDB(new File(args[0]), desFolder);
+        }
 	}
 
+	//type: 
+	//0 LevelDB
+	//1 Anvil
+	private static void checkFolder(String path, int type) throws IOException {
+		File folder = null;
+		try{
+			folder = new File(path);
+			if(!folder.exists()){
+				throw new RuntimeException(path + " doesn't exist");
+			} else if (!folder.isDirectory()){
+				throw new RuntimeException(path + " is not a folder");
+			} else {
+				boolean hasData = false;
+				if(type == 0){
+					DB db = null;
+					try{
+						Options options = new Options();
+						options.createIfMissing(false);
+						db = factory.open(folder, options);
+						
+						DBIterator iterator = db.iterator();
+						for(iterator.seekToFirst(); iterator.hasNext(); iterator.next()){
+							byte[] key = iterator.peekNext().getKey();
+							if(key.length == 9 && key[8] == 0x30){
+								hasData = true;
+								break;
+							}
+						}
+						if(!hasData){
+							throw new RuntimeException(path + " is not a valid LevelDB folder");
+						}
+					}
+					finally{
+						db.close();
+					}
+				}
+				else{
+					String[] mcaFiles = folder.list(new SuffixFileFilter(".mca"));
+					if(mcaFiles.length < 1){
+						throw new RuntimeException(path + " is not a valid Anvil folder");
+					}
+				}
+			}
+		} catch (Exception e) {
+			throw e;
+		}
+		
+	}
+	
     private static void printUsageAndExit() {
-        System.out.println("Map converter for Minecraft:Pocket Edition, from format \"LevelDB\" to \"Anvil\". (c) ljyloo 2015");
+        System.out.println("Map converter for Minecraft:Pocket Edition, from format \"LevelDB\" to \"Anvil\", or from format \"Anvil\" to \"LevelDB\". (c) ljyloo 2015");
         System.out.println("");
         System.out.println("Usage:");
-        System.out.println("\tjava -jar Converter.jar <import folder> <export folder>");
+        System.out.println("\tjava -jar Converter.jar <import folder> <export folder> <type>");
         System.out.println("Where:");
         System.out.println("\t<import folder>\tThe full path to the folder containing Minecraft:Pocket Edition world");
         System.out.println("\t<export folder>\tThe full path to the folder which you want to export");
+        System.out.println("\t<type>\t0 represents \"LevelDB\" to \"Anvil\", 1 represents \"Anvil\" to \"LevelDB\"");
         System.out.println("Example:");
-        System.out.println("\tjava -jar Converter.jar /home/ljyloo/import /home/ljyloo/export");
+        System.out.println("\tjava -jar Converter.jar /home/ljyloo/LevelDB /home/ljyloo/Anvil 0");
         System.exit(1);
     }
 	
-	public static void convert(File src, File des) throws IOException{
+	public static void levelDB2Anvil(File src, File des) throws IOException{
 		DB db = null;
 		try{
 			Options options = new Options();
@@ -233,6 +299,10 @@ public class PE2PC {
 			db.close();
 		}
 		System.out.println("Done!");
+	}
+	
+	public static void anvilToLevelDB(File src, File des) throws IOException{
+		
 	}
 	
 	public static String byte2s(byte[] b, boolean ignoreTooLong){
