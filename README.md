@@ -24,3 +24,7 @@ https://mojang.com/2012/02/new-minecraft-map-format-anvil/
 ## Example:
 
 `java -jar Converter.jar /home/ljyloo/LevelDB /home/ljyloo/Anvil 0`
+
+## Attention:
+
+This is an experimental project, it's highly recommended that you should backup your data before converting. Any data corruption caused by this program should be responsible for yourself.

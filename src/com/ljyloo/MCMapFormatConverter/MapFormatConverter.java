@@ -1,4 +1,4 @@
-package com.ljyloo.PE2PC;
+package com.ljyloo.MCMapFormatConverter;
 
 import org.apache.commons.io.filefilter.SuffixFileFilter;
 import org.iq80.leveldb.*;
@@ -16,7 +16,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
 
-public class PE2PC {
+public class MapFormatConverter {
 	private final static int DATALAYER_BITS = 7;
 	private final static int BLOCKDATA_BYTES = 32768;
 	private final static int METADATA_BYTES = 16384;
@@ -50,7 +50,7 @@ public class PE2PC {
         try {
             checkFolder(args[0], type);
         } catch (Exception e) {
-        	System.err.println("Failed to check folder \"" + args[0] + "\". Problem: " + e.getMessage());
+        	System.err.println("Failed to check folder \"" + args[0] + "\" 's validation. Problem: " + e.getMessage());
         	System.out.println("\n");
             printUsageAndExit();
         }
@@ -126,6 +126,7 @@ public class PE2PC {
 		}
 		
 	}
+	
 	
     private static void printUsageAndExit() {
         System.out.println("Map converter for Minecraft:Pocket Edition, from format \"LevelDB\" to \"Anvil\", or from format \"Anvil\" to \"LevelDB\". (c) ljyloo 2015");
@@ -302,10 +303,11 @@ public class PE2PC {
 	}
 	
 	public static void anvilToLevelDB(File src, File des) throws IOException{
+		DB db = null;
 		
 	}
 	
-	public static String byte2s(byte[] b, boolean ignoreTooLong){
+	private static String byte2s(byte[] b, boolean ignoreTooLong){
 		String s = "0x";
 		int length = b.length;
 		boolean tooLong = false;
@@ -321,7 +323,7 @@ public class PE2PC {
 		return s;
 	}
 	
-	public static byte[] intToByteArray(int i){
+	private static byte[] intToByteArray(int i){
 		byte[] result = new byte[4];
 		result[0] = (byte)((i >> 24) & 0xFF);
 		result[1] = (byte)((i >> 16) & 0xFF);
@@ -330,7 +332,7 @@ public class PE2PC {
 		return result;
 	}
 	
-	public static int byteArrayToInt(byte[] bytes){
+	private static int byteArrayToInt(byte[] bytes){
 		int value= 0;
 		for (int i = 0; i < 4; i++){
 			int shift = (4 - 1 - i) * 8;
@@ -339,7 +341,7 @@ public class PE2PC {
 		return value;
 	}
 	
-	public static class LevelDBChunk{
+	private static class LevelDBChunk{
 		public OldDataLayer blockLight;
 		public OldDataLayer skyLight;
 		public OldDataLayer data;
