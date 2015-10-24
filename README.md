@@ -21,4 +21,4 @@ Find more info at https://forums.pocketmine.net/threads/leveldb-maps-to-anvil.12
 
 ##Credits:
 Thanks to @ljyloo for creating this amazing converter.
-User-friendly start.bat and the rewrite of this file was by @keithkfng.
+User-friendly start.bat, the folder 'worldanvil' and the rewrite of this file was by @keithkfng.
