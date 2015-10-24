@@ -1,7 +1,7 @@
 # LevelDb2Anvil
 A map converter for Minecraft: Pocket Edition
 
-Map converter for Minecraft:Pocket Edition, from format "LevelDB" to "Anvil".
+Map converter for Minecraft: Pocket Edition, from format "LevelDB" to "Anvil".
 
 This program uses leveldb by tinfoiled. See lisense here https://github.com/ljyloo/leveldb
 
