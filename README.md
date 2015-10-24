@@ -9,6 +9,10 @@ This program contains code from Mojang: source at
 
 https://mojang.com/2012/02/new-minecraft-map-format-anvil/
 
+##Warning:
+
+The converter will experience an error if you have blocks which are not supported by Minecraft PC Edition. It will make your .mca files corrupted, therefore please replace those blocks with another block that is supported.
+
 ## Usage:
 
 Import your LevelDB world in and rename it to the name 'world'.
