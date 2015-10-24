@@ -11,14 +11,10 @@ https://mojang.com/2012/02/new-minecraft-map-format-anvil/
 
 ## Usage:
 
-`java -jar Converter.jar <import folder> <export folder>`
+Import your LevelDB world in and rename it to the name 'world'.
+Run start.bat and the converter will now convert it to Anvil format to the output folder of 'worldanvil'.
+Find more info at https://forums.pocketmine.net/threads/leveldb-maps-to-anvil.12018/
 
-## Where:
-
-`<import folder> The full path to the folder containing Minecraft:Pocket Edition world`
-
-`<export folder> The full path to the folder which you want to export`
-
-## Example:
-
-`java -jar Converter.jar /home/ljyloo/import /home/ljyloo/export`
+##Credits:
+Thanks to @ljyloo for creating this amazing converter.
+User-friendly start.bat and the rewrite of this file was by @keithkfng.
