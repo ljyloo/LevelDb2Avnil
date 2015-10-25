@@ -16,7 +16,7 @@ The converter will experience an error if you have blocks which are not supporte
 ## Usage:
 
 Import your LevelDB world in and rename it to the name 'world'.
-Run start.bat and the converter will now convert it to Anvil format to the output folder of 'worldanvil'.
+Run start.bat(if you're on Windows) or start.sh(if you're on OS X or Linux) and the converter will now convert it to Anvil format to the output folder of 'worldanvil'.
 Find more info at https://forums.pocketmine.net/threads/leveldb-maps-to-anvil.12018/
 
 ##Credits:
