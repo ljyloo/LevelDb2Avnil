@@ -63,7 +63,9 @@ public class PE2PC {
 	}
 
     private static void printUsageAndExit() {
-        System.out.println("Map converter for Minecraft:Pocket Edition, from format \"LevelDB\" to \"Anvil\". (c) ljyloo 2015");
+    	System.out.println("Working Directory = " +
+                System.getProperty("user.dir"));
+        System.out.println("Convert Minecraft: Pocket Edition Maps(LevelDB) to Minecraft Maps(Anvil) or reversely. (c) ljyloo 2017");
         System.out.println("");
         System.out.println("Usage:");
         System.out.println("\tjava -jar Converter.jar <import folder> <export folder>");
@@ -72,11 +74,15 @@ public class PE2PC {
         System.out.println("\t<export folder>\tThe full path to the folder which you want to export");
         System.out.println("Example:");
         System.out.println("\tjava -jar Converter.jar /home/ljyloo/import /home/ljyloo/export");
+        System.out.println("");
+        System.out.println("Visit the homepage of this project for more information:");
+        System.out.println("\tgithub.com/ljyloo/LevelDb2Avnil");
         System.exit(1);
     }
 	
 	public static void convert(File src, File des) throws IOException{
 		DB db = null;
+		int totalChunk = 0;
 		try{
 			Options options = new Options();
 			options.createIfMissing(true);
@@ -93,6 +99,7 @@ public class PE2PC {
 						int chunkX = byteArrayToInt(new byte[]{key[3], key[2], key[1], key[0]});
 						int chunkZ = byteArrayToInt(new byte[]{key[7], key[6], key[5], key[4]});
 						System.out.println("Converting chunk X:"+chunkX+" Z:"+chunkZ);
+						totalChunk++;
 						CompoundTag tag = new CompoundTag();
 						CompoundTag levelData = new CompoundTag();
 						tag.put("Level", levelData);
@@ -232,7 +239,12 @@ public class PE2PC {
 		finally{
 			db.close();
 		}
-		System.out.println("Done!");
+		if(totalChunk > 0){
+			System.out.println("Done!");
+		}
+		else{
+			System.out.println("Oops! It seems that the input data does not contain any valid chunk.");
+		}
 	}
 	
 	public static String byte2s(byte[] b, boolean ignoreTooLong){
