@@ -12,7 +12,7 @@ Any question, bug or advice, feel free to talk with me at [here](https://github.
 
 ## Known Issues:
 
-- block light and sky light will always be 15 (Still don't know how to get the data from Mojang's LevelDB database so I just set it 15)
+- Block light and sky light will always be 15 (Still don't know how to get the data from Mojang's LevelDB database so I just set it 15)
 - No entities
 - Player will not spawn at the same coordinate like before
 - Items in the chest will disappear
@@ -22,12 +22,14 @@ Any question, bug or advice, feel free to talk with me at [here](https://github.
 
 ## Usage:
 
+### Video tutorial
 There's a video tutorial about this(Made by AntVenom): [Link](https://www.youtube.com/watch?v=EFAkc5L4h48)
 
+### Auto script
 Import your LevelDB world in and rename it to the name 'world'.
 Run start.bat(if you're on Windows) or start.sh(if you're on OS X or Linux) and the converter will now convert it to Anvil format to the output folder of 'worldanvil'.
-Find more info at [here](https://forums.pocketmine.net/threads/leveldb-maps-to-anvil.12018/)
 
+### Command line interface
 If you were familiar with command line interface, using the Converter.jar like this(You may want to [install java runtime first](java.com)): 
 
 ```
