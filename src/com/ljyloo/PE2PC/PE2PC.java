@@ -9,6 +9,7 @@ import com.mojang.nbt.NbtIo;
 import net.minecraft.world.level.chunk.DataLayer;
 import net.minecraft.world.level.chunk.OldDataLayer;
 import net.minecraft.world.level.chunk.storage.*;
+
 import static org.iq80.leveldb.impl.Iq80DBFactory.*;
 
 import java.io.*;
@@ -17,11 +18,11 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 
 public class PE2PC {
-	private final static int DATALAYER_BITS = 7;
-	private final static int BLOCKDATA_BYTES = 32768;
-	private final static int METADATA_BYTES = 16384;
-	private final static int SKYLIGHTDATA_BYTES = 16384;
-	private final static int BLOCKLIGHTDATA_BYTES = 16384;
+	private final static int DATALAYER_BITS = 4;
+	private final static int BLOCKDATA_BYTES = 4096;
+	private final static int METADATA_BYTES = 2048;
+	private final static int SKYLIGHTDATA_BYTES = 2048;
+	private final static int BLOCKLIGHTDATA_BYTES = 2048;
 	
 	public static void main(String[] args) throws IOException {
 		//System.out.println((-1 % 32 + 32) % 32);
@@ -91,139 +92,191 @@ public class PE2PC {
 			DBIterator iterator = db.iterator();
 			//ArrayList<byte[]> keys = new ArrayList<byte[]>();
 			HashMap<String, RegionFile> regions = new HashMap<String, RegionFile>();
+			HashMap<String, CompoundTag> comChunks = new HashMap<>();
+			HashMap<String, Integer> chunkHeight = new HashMap<>();
 			try{
 				for(iterator.seekToFirst(); iterator.hasNext(); iterator.next()){
 					byte[] key = iterator.peekNext().getKey();
-					if(key.length == 9 && key[8] == 0x30){
-						byte[] value = iterator.peekNext().getValue();
+					//System.out.println(byte2s(key, false));
+					byte[] value = iterator.peekNext().getValue();
+					//System.out.println("Length: " + value.length);
+					if(key.length == 10 && key[8] == 47){
+						
+						
 						int chunkX = byteArrayToInt(new byte[]{key[3], key[2], key[1], key[0]});
 						int chunkZ = byteArrayToInt(new byte[]{key[7], key[6], key[5], key[4]});
-						System.out.println("Converting chunk X:"+chunkX+" Z:"+chunkZ);
+						int chunkY = (int) key[9];
+						
+						System.out.print("\rConverting subchunk X: "+chunkX+" Z: "+chunkZ+" Y: "+chunkY+"                     ");
+						System.out.flush();
 						totalChunk++;
-						CompoundTag tag = new CompoundTag();
-						CompoundTag levelData = new CompoundTag();
-						tag.put("Level", levelData);
 						
-						levelData.putByte("LightPopulated", (byte)1);
-						levelData.putByte("TerrainPopulated", (byte)1);
-						levelData.putByte("V", (byte)1);
-						levelData.putInt("xPos", chunkX);
-						levelData.putInt("zPos", chunkZ);
-						levelData.putLong("InhabitedTime", 0);
-						levelData.putLong("LastUpdate", 0);
-						byte[] biomes = new byte[16 * 16];
-						for(int i = 0; i <256; i++)
-							biomes[i] = -1;
-						levelData.putByteArray("Biomes", biomes);
-						levelData.put("Entities", new ListTag<CompoundTag>("Entities"));
+						String comKey = chunkX+","+chunkZ;
+						if (!comChunks.containsKey(comKey)){
+							//System.out.println("New comChunks");
+							CompoundTag tag = new CompoundTag();
+							CompoundTag levelData = new CompoundTag();
+							tag.put("Level", levelData);
+							
+							levelData.putByte("LightPopulated", (byte)1);
+							levelData.putByte("TerrainPopulated", (byte)1);
+							levelData.putByte("V", (byte)1);
+							levelData.putInt("xPos", chunkX);
+							levelData.putInt("zPos", chunkZ);
+							levelData.putLong("InhabitedTime", 0);
+							levelData.putLong("LastUpdate", 0);
+							
+							byte[] biomes = new byte[16 * 16];
+							for(int i = 0; i <256; i++)
+								biomes[i] = -1;
+							levelData.putByteArray("Biomes", biomes);
+							
+							levelData.put("Entities", new ListTag<CompoundTag>("Entities"));
+							
+							ListTag<CompoundTag> sectionTags = new ListTag<CompoundTag>("Sections");
+							levelData.put("Sections", sectionTags);
+							
+							levelData.put("TileEntities", new ListTag<CompoundTag>("TileEntities"));
+							
+							comChunks.put(comKey, tag);
+						}
 						
-						ListTag<CompoundTag> sectionTags = new ListTag<CompoundTag>("Sections");
+						
+						
+						CompoundTag tag = comChunks.get(comKey);
+						CompoundTag levelData = tag.getCompound("Level");
+						
+						@SuppressWarnings("unchecked")
+						ListTag<CompoundTag> sectionTags = (ListTag<CompoundTag>) levelData.getList("Sections");
 						
 						LevelDBChunk data = new LevelDBChunk(chunkX, chunkZ);
 						
+						int offset = 1;
+						
 						data.blocks = new byte[BLOCKDATA_BYTES];
-						System.arraycopy(value, 0, data.blocks, 0, BLOCKDATA_BYTES);
+						System.arraycopy(value, offset, data.blocks, 0, BLOCKDATA_BYTES);
+						offset += BLOCKDATA_BYTES;
 						
 						byte[] metadata = new byte[METADATA_BYTES];
-						System.arraycopy(value, BLOCKDATA_BYTES, metadata, 0, METADATA_BYTES);
+						System.arraycopy(value, offset, metadata, 0, METADATA_BYTES);
+						offset += METADATA_BYTES;
 						data.data = new OldDataLayer(metadata, DATALAYER_BITS);
 						
 						byte[] skyLightData = new byte[SKYLIGHTDATA_BYTES];
-						System.arraycopy(value, BLOCKDATA_BYTES + METADATA_BYTES, skyLightData, 0, SKYLIGHTDATA_BYTES);
+						if (offset + SKYLIGHTDATA_BYTES < value.length)
+							System.arraycopy(value, offset, skyLightData, 0, SKYLIGHTDATA_BYTES);
+						offset += SKYLIGHTDATA_BYTES;
 						data.skyLight = new OldDataLayer(skyLightData, DATALAYER_BITS);
 						
 						byte[] blockLightData = new byte[BLOCKLIGHTDATA_BYTES];
-						System.arraycopy(value, BLOCKDATA_BYTES + METADATA_BYTES + SKYLIGHTDATA_BYTES, blockLightData, 0, BLOCKLIGHTDATA_BYTES);
+						if (offset + BLOCKLIGHTDATA_BYTES < value.length)
+							System.arraycopy(value, offset, blockLightData, 0, BLOCKLIGHTDATA_BYTES);
 						data.blockLight = new OldDataLayer(blockLightData, DATALAYER_BITS);
 						
-						for (int yBase = 0; yBase < (128 / 16); yBase++) {
+						byte[] blocks = new byte[16 * 16 * 16];
+			            DataLayer dataValues = new DataLayer(blocks.length, 4);
+			            DataLayer skyLight = new DataLayer(blocks.length, 4);
+			            DataLayer blockLight = new DataLayer(blocks.length, 4);
 
-				            // find non-air
-				            boolean allAir = true;
-				            for (int x = 0; x < 16 && allAir; x++) {
-				                for (int y = 0; y < 16 && allAir; y++) {
-				                    for (int z = 0; z < 16; z++) {
-				                        int pos = (x << 11) | (z << 7) | (y + (yBase << 4));
-				                        int block = data.blocks[pos];
-				                        if (block != 0) {
-				                            allAir = false;
-				                            break;
-				                        }
-				                    }
-				                }
-				            }
+			            for (int x = 0; x < 16; x++) {
+			                for (int y = 0; y < 16; y++) {
+			                    for (int z = 0; z < 16; z++) {
+			                        int pos = (x << 8) | (z << 4) | y;
+			                        int block = data.blocks[pos];
 
-				            if (allAir) {
-				                continue;
-				            }
+			                        blocks[(y << 8) | (z << 4) | x] = (byte) (block & 0xff);
+			                        dataValues.set(x, y, z, data.data.get(x, y, z));
+			                        //skyLight.set(x, y, z, data.skyLight.get(x, y, z));
+			                        //blockLight.set(x, y, z, data.blockLight.get(x, y, z));
+			                        skyLight.set(x, y, z, 0xf);
+			                        blockLight.set(x, y, z, 0xf);
+			                    }
+			                }
+			            }
 
-				            // build section
-				            byte[] blocks = new byte[16 * 16 * 16];
-				            DataLayer dataValues = new DataLayer(blocks.length, 4);
-				            DataLayer skyLight = new DataLayer(blocks.length, 4);
-				            DataLayer blockLight = new DataLayer(blocks.length, 4);
+			            CompoundTag sectionTag = new CompoundTag();
 
-				            for (int x = 0; x < 16; x++) {
-				                for (int y = 0; y < 16; y++) {
-				                    for (int z = 0; z < 16; z++) {
-				                        int pos = (x << 11) | (z << 7) | (y + (yBase << 4));
-				                        int block = data.blocks[pos];
+			            sectionTag.putByte("Y", (byte) (chunkY & 0xff));
+			            sectionTag.putByteArray("Blocks", blocks);
+			            sectionTag.putByteArray("Data", dataValues.data);
+			            sectionTag.putByteArray("SkyLight", skyLight.data);
+			            sectionTag.putByteArray("BlockLight", blockLight.data);
 
-				                        blocks[(y << 8) | (z << 4) | x] = (byte) (block & 0xff);
-				                        dataValues.set(x, y, z, data.data.get(x, y + (yBase << 4), z));
-				                        skyLight.set(x, y, z, data.skyLight.get(x, y + (yBase << 4), z));
-				                        blockLight.set(x, y, z, data.blockLight.get(x, y + (yBase << 4), z));
-				                    }
-				                }
-				            }
-
-				            CompoundTag sectionTag = new CompoundTag();
-
-				            sectionTag.putByte("Y", (byte) (yBase & 0xff));
-				            sectionTag.putByteArray("Blocks", blocks);
-				            sectionTag.putByteArray("Data", dataValues.data);
-				            sectionTag.putByteArray("SkyLight", skyLight.data);
-				            sectionTag.putByteArray("BlockLight", blockLight.data);
-
-				            sectionTags.add(sectionTag);
-				        }
-						levelData.put("Sections", sectionTags);
+			            sectionTags.add(sectionTag);
 				        
-				        levelData.put("TileEntities", new ListTag<CompoundTag>("TileEntities"));
-				        int[] heightMap = new int[256];
-				        for(int x = 0; x < 16; x++){
-				        	for(int z = 0; z < 16; z++){
-				        		for(int y = 127; y >= 0; y--){
-				        			int pos = (x << 11) | (z << 7) | y;
-				        			int block = data.blocks[pos];
-				        			if(block != 0){
-				        				heightMap[(x << 4) | z] = y;
-				        				break;
-				        			}
-				        		}
-				        	}
-				        }
-				        levelData.putIntArray("HeightMap", heightMap);
-						
-						String k = (chunkX >> 5) + "." + (chunkZ >> 5);
-						if(!regions.containsKey(k)){
-							regions.put(k, new RegionFile(new File(des, "r." + (chunkX >> 5) + "." + (chunkZ >> 5) + ".mca")));
-						}
-						RegionFile regionDest = regions.get(k);
-						int regionX = (chunkX % 32 + 32) % 32;
-						int regionZ = (chunkZ % 32 + 32) % 32;
-						/*if(chunkX < 0 || chunkZ < 0){
-							@SuppressWarnings("unused")
-							int i = 1+1;
-						}*/
-						DataOutputStream chunkDataOutputStream = regionDest.getChunkDataOutputStream(regionX, regionZ);
-						if(chunkDataOutputStream == null){
-							System.out.println(chunkX % 32);
-							System.out.println(chunkZ % 32);
-						}
-						NbtIo.write(tag, chunkDataOutputStream);
-						chunkDataOutputStream.close();
+			            if (!chunkHeight.containsKey(comKey)) {
+			            	chunkHeight.put(comKey, chunkY);
+			            }
+			            else {
+			            	int temp = chunkHeight.get(comKey);
+			            	if (chunkY > temp)
+			            		chunkHeight.put(comKey, chunkY);
+			            }
 					}
+				}
+				
+				
+				
+				Iterator<Entry<String, CompoundTag>> iter = comChunks.entrySet().iterator();
+				while (iter.hasNext()){
+					Entry<String, CompoundTag> entry = iter.next();
+					String key = entry.getKey();
+					
+					CompoundTag tag = entry.getValue();
+					CompoundTag levelData = tag.getCompound("Level");
+					@SuppressWarnings("unchecked")
+					ListTag<CompoundTag> sectionTags = (ListTag<CompoundTag>) levelData.getList("Sections");
+					int topChunk = chunkHeight.get(key);
+					
+					for (int i = 0; i < sectionTags.size(); i++) {
+						CompoundTag subChunk = sectionTags.get(i);
+						int Y = subChunk.getByte("Y");
+						if (Y == topChunk) {
+							DataLayer dataValues = new DataLayer(subChunk.getByteArray("Data"), 4);
+							
+							int[] heightMap = new int[256];
+					        for(int x = 0; x < 16; x++){
+					        	for(int z = 0; z < 16; z++){
+					        		for(int y = 15; y >= 0; y--){
+					        			int block = dataValues.get(x, y, z);
+					        			if(block != 0){
+					        				heightMap[(x << 4) | z] = (Y << 4) | y;
+					        				break;
+					        			}
+					        		}
+					        	}
+					        }
+					        levelData.putIntArray("HeightMap", heightMap);
+							break;
+						}
+					}
+					/*
+					int[] heightMap = new int[256];
+			        for(int x = 0; x < 16; x++){
+			        	for(int z = 0; z < 16; z++){
+			        		heightMap[(x << 4) | z] = 0;
+			        	}
+			        }
+			        levelData.putIntArray("HeightMap", heightMap);
+					*/
+					String[] parts = key.split(",");
+					int chunkX = Integer.parseInt(parts[0]);
+					int chunkZ = Integer.parseInt(parts[1]);
+					
+					String k = (chunkX >> 5) + "." + (chunkZ >> 5);
+					if(!regions.containsKey(k)){
+						regions.put(k, new RegionFile(new File(des, "r." + (chunkX >> 5) + "." + (chunkZ >> 5) + ".mca")));
+					}
+					RegionFile regionDest = regions.get(k);
+					int regionX = (chunkX % 32 + 32) % 32;
+					int regionZ = (chunkZ % 32 + 32) % 32;
+					DataOutputStream chunkDataOutputStream = regionDest.getChunkDataOutputStream(regionX, regionZ);
+					if(chunkDataOutputStream == null){
+						System.out.println(chunkX % 32);
+						System.out.println(chunkZ % 32);
+					}
+					NbtIo.write(tag, chunkDataOutputStream);
+					chunkDataOutputStream.close();
 				}
 			}
 			finally{
@@ -240,7 +293,7 @@ public class PE2PC {
 			db.close();
 		}
 		if(totalChunk > 0){
-			System.out.println("Done!");
+			System.out.println("\nDone! totalSubChunks: " + totalChunk);
 		}
 		else{
 			System.out.println("Oops! It seems that the input data does not contain any valid chunk.");
@@ -275,7 +328,9 @@ public class PE2PC {
 	public static int byteArrayToInt(byte[] bytes){
 		int value= 0;
 		for (int i = 0; i < 4; i++){
-			int shift = (4 - 1 - i) * 8;
+			if (bytes.length - i < 1)
+				break;
+			int shift = (3 - i) * 8;
 			value += (bytes[i] & 0x000000FF) << shift;
 		}
 		return value;
