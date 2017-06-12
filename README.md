@@ -6,6 +6,23 @@ Convert Minecraft: Pocket Edition Maps(LevelDB) to Minecraft Maps(Anvil) or reve
 
 This converter only works for pe 1.0 and later.
 
+## Known Issues:
+
+- block light and sky light will be always at 15 (Still don't know how to get the data so I just set it at 15)
+- No entities
+- Player will not spawn at the same coordinate like the old world
+- Items in the chest will disappear
+- No biome
+- Crash(super rare!)
+
+## Todo
+
+- [ ] Transfer light data
+- [ ] Transfer player coordinate
+- [ ] Transfer entities
+- [ ] Transfer items contained in the chest
+- [ ] Transfer biome
+
 ## Usage:
 
 There's a video tutorial about this(Made by AntVenom): [Link](https://www.youtube.com/watch?v=EFAkc5L4h48)
