@@ -2,9 +2,9 @@
 
 Convert Minecraft: Pocket Edition Maps(LevelDB) to Minecraft Maps(Anvil) or reversely.
 
-## Warning:
+## Info:
 
-The converter will experience an error if you have blocks which are not supported by Minecraft PC Edition. It will make your .mca files corrupted, therefore please replace those blocks with another block that is supported.
+This converter only works for pe 1.0 and later.
 
 ## Usage:
 
