@@ -73,7 +73,7 @@ public class PE2PC {
 				
 				Loop1:
 				while(iterator.hasNext()){
-					//New Chunk
+
 					byte[] key = iterator.peekNext().getKey();
 					
 					if(key.length < 10 && key.length > 7 && (key[8] > 44 && key[8]<51)){
@@ -127,7 +127,7 @@ public class PE2PC {
 							}
 						}
 					}
-					System.out.println("Unknown Key: \n" + byte2s(key,false) + "\n");
+					System.out.println("\rUnknown Key: \n" + byte2s(key,false) + "\n");
 					iterator.next();
 				}
 				
