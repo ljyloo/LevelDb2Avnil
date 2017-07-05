@@ -212,6 +212,14 @@ class ConvertSource {
 		}
 	}
 	
+	public void convertData2DLegacy(byte[] value){}
+	
+	public void convertBlockEntity(byte[] value){}
+	
+	public void convertEntity(byte[] value){}
+	
+	public void convertSonw(byte[] value){}
+	
 	public int[] getCurrent(){
 		return new int[]{current.level.getInt("xPos"), current.level.getInt("zPos")};
 	}
