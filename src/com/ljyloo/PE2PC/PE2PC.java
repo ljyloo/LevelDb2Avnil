@@ -18,96 +18,43 @@ import java.util.List;
 
 public class PE2PC {
 	
-	private final static int DATALAYER_BITS = 4;
-	private final static int BLOCKDATA_BYTES = 4096;
-	private final static int METADATA_BYTES = 2048;
-	private final static int SKYLIGHTDATA_BYTES = 2048;
-	private final static int BLOCKLIGHTDATA_BYTES = 2048;
-	
 	public static void main(String[] args) throws IOException {
-	//System.out.println((-1 % 32 + 32) % 32);
-		if (args.length != 2) {
-			printUsageAndExit();
-		}
+		//System.out.println((-1 % 32 + 32) % 32);
+        if (args.length != 2) {
+            printUsageAndExit();
+        }
+        
+        File srcFolder, desFolder;
+        try{
+        	srcFolder = checkFolder(args[0] + "/db");
+            desFolder = checkFolder(args[1]);
+        }catch(Exception e){
+        	System.err.println("Folder problem: " + e.getMessage() + "\n");
+        	printUsageAndExit();
+        	return;
+        }
 
-		File srcFolder;
-		try {
-			srcFolder = new File(args[0]+"/db");
-			if (!srcFolder.exists()) {
-				throw new RuntimeException(args[0] + " doesn't exist");
-			} else if (!srcFolder.isDirectory()) {
-				throw new RuntimeException(args[0] + " is not a folder");
-			}
-		} catch (Exception e) {
-			System.err.println("import folder problem: " + e.getMessage());
-			System.out.println("");
-			printUsageAndExit();
-			return;
-		}
-	
-		File desFolder;
-		try {
-      		  	desFolder = new File(args[1]);
-			if (!desFolder.exists()) {
-				throw new RuntimeException(args[1] + " doesn't exist");
-			} else if (!desFolder.isDirectory()) {
-				throw new RuntimeException(args[1] + " is not a folder");
-			}
-		} catch (Exception e) {
-			System.err.println("export folder problem: " + e.getMessage());
-			System.out.println("");
-			printUsageAndExit();
-			return;
-		}
-	
-		convert(srcFolder, desFolder);
-	}
-
-	private static void printUsageAndExit() {
-		System.out.println("Working Directory = " +
-			System.getProperty("user.dir"));
-		System.out.println("Convert Minecraft: Pocket Edition Maps(LevelDB) to Minecraft Maps(Anvil) or reversely. (c) ljyloo 2017");
-		System.out.println("");
-		System.out.println("Usage:");
-		System.out.println("\tjava -jar Converter.jar <import folder> <export folder>");
-		System.out.println("Where:");
-		System.out.println("\t<import folder>\tThe full path to the folder containing Minecraft:Pocket Edition world");
-		System.out.println("\t<export folder>\tThe full path to the folder which you want to export");
-		System.out.println("Example:");
-		System.out.println("\tjava -jar Converter.jar /home/ljyloo/import /home/ljyloo/export");
-		System.out.println("");
-		System.out.println("Visit the homepage of this project for more information:");
-        	System.out.println("\tgithub.com/ljyloo/LevelDb2Avnil");
-		System.exit(1);
+        convert(srcFolder, desFolder);
 	}
 	
-	public static void legacy(File src) throws IOException{
-   	 	DB db = null;
-   	 	System.out.println("Reading...");
-		try{
-			Options options = new Options();
-			options.createIfMissing(false);
-			db = factory.open(src, options);
-		
-			DBIterator iterator = db.iterator();
-		
-			for(iterator.seekToFirst(); iterator.hasNext(); iterator.next()){
-				byte[] key = iterator.peekNext().getKey();
-				if (key.length >= 9 && key[8] == 48){
-					System.out.println(byte2s(key, false));
-					System.out.println(iterator.peekNext().getValue().length);
-					break;
-				}
-			}
-		}
-		catch (Exception e) {
-			e.printStackTrace();
-		}
-		finally{
-			db.close();
-		}
-	}
-
+    private static void printUsageAndExit() {
+    	System.out.println("Working Directory = " +
+                System.getProperty("user.dir"));
+        System.out.println("Convert Minecraft: Pocket Edition Maps(LevelDB) to Minecraft Maps(Anvil) or reversely. (c) ljyloo 2017");
+        System.out.println("");
+        System.out.println("Usage:");
+        System.out.println("\tjava -jar Converter.jar <import folder> <export folder>");
+        System.out.println("Where:");
+        System.out.println("\t<import folder>\tThe full path to the folder containing Minecraft:Pocket Edition world");
+        System.out.println("\t<export folder>\tThe full path to the folder which you want to export");
+        System.out.println("Example:");
+        System.out.println("\tjava -jar Converter.jar /home/ljyloo/import /home/ljyloo/export");
+        System.out.println("");
+        System.out.println("Visit the homepage of this project for more information:");
+        System.out.println("\tgithub.com/ljyloo/LevelDb2Avnil");
+        System.exit(1);
+    }
+    	
 	public static void convert(File src, File des) throws IOException{
 		DB db = null;
 		int totalChunk = 0;
@@ -258,33 +205,33 @@ public class PE2PC {
 		}
 	}
 	
-	public static void legacy(File src) throws IOException{
-		DB db = null;
-		System.out.println("Reading...");
-			try{
-				Options options = new Options();
-				options.createIfMissing(false);
-				db = factory.open(src, options);
-
-				DBIterator iterator = db.iterator();
-
-				for(iterator.seekToFirst(); iterator.hasNext(); iterator.next()){
-					byte[] key = iterator.peekNext().getKey();
-					if (key.length >= 9 && key[8] == 48){
-						System.out.println(byte2s(key, false));
-						System.out.println(iterator.peekNext().getValue().length);
-						break;
-					}
+    public static void legacy(File src) throws IOException{
+    	DB db = null;
+    	System.out.println("Reading...");
+		try{
+			Options options = new Options();
+			options.createIfMissing(false);
+			db = factory.open(src, options);
+			
+			DBIterator iterator = db.iterator();
+			
+			for(iterator.seekToFirst(); iterator.hasNext(); iterator.next()){
+				byte[] key = iterator.peekNext().getKey();
+				if (key.length >= 9 && key[8] == 48){
+					System.out.println(byte2s(key, false));
+					System.out.println(iterator.peekNext().getValue().length);
+					break;
 				}
 			}
-			catch (Exception e) {
-				e.printStackTrace();
-			}
-			finally{
-				db.close();
-			}
-	}
-	
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		finally{
+			db.close();
+		}
+    }
+    
 	public static String byte2s(byte[] b, boolean ignoreTooLong){
 		String s = "0x";
 		int length = b.length;
@@ -319,5 +266,16 @@ public class PE2PC {
 			value += (bytes[i] & 0x000000FF) << shift;
 		}
 		return value;
+	}
+	
+	private static File checkFolder(String path){
+		File folder = new File(path);
+
+        if (!folder.exists())
+            throw new RuntimeException(path + " doesn't exist");
+        else if (!folder.isDirectory())
+            throw new RuntimeException(path + " is not a folder");
+        
+		return folder;
 	}
 }
