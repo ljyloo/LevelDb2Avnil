@@ -90,6 +90,7 @@ public class UnsharedData {
 		case (byte) 249:  //info_update2
 		case (byte) 250:  //movingblock
 		case (byte) 251:  //observer
+			return new byte[]{(byte) 218, data};
 		case (byte) 255:  //reserved6
 			return new byte[]{(byte) 0, 0};
 		default:
