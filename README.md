@@ -14,11 +14,11 @@ Any question, bug or advice, feel free to talk with me at [here](https://github.
 
 ## Known Issues:
 
-- Block light and sky light will always be 15 (Still don't know how to get the data from Mojang's LevelDB database so I just set it 15)
+- ~~Block light and sky light will always be 15 (Still don't know how to get the data from Mojang's LevelDB database so I just set it 15)~~Checkout [here](https://github.com/ljyloo/LevelDb2Avnil/pull/19)
 - No entities
 - Player will not spawn at the same coordinate like before
 - Items in the chest will disappear
-- No biome
+- ~~No biome~~
 - Lag when first time load
 - Crash(super rare!)
 
@@ -44,8 +44,8 @@ java -jar Converter.jar <import folder> <export folder>
 - [ ] Fix player coordinate
 - [ ] Fix entities
 - [ ] Fix items contained in the chest
-- [ ] Fix biome
-- [ ] Refactor the code
+- [x] Fix biome
+- [x] Refactor the code
 - [ ] Graphical user interface
 
 ## Screenshots:
