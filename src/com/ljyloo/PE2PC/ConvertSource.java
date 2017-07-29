@@ -197,16 +197,16 @@ class ConvertSource {
 			
 			if(allAir) continue;
 			
-			int size = BLOCKDATA_BYTES + METADATA_BYTES;
+			int size = BLOCKDATA_BYTES + METADATA_BYTES + 1;
 			byte[] subChunk = new byte[size];
 			
 			//Block Data
 			int offset = chunkY*BLOCKDATA_BYTES;
-			System.arraycopy(value, offset, subChunk, 0, BLOCKDATA_BYTES);
+			System.arraycopy(value, offset, subChunk, 1, BLOCKDATA_BYTES);
 			
 			//Meta Data
 			offset = 8*BLOCKDATA_BYTES+chunkY*METADATA_BYTES;
-			System.arraycopy(value, offset, subChunk, BLOCKDATA_BYTES, METADATA_BYTES);
+			System.arraycopy(value, offset, subChunk, BLOCKDATA_BYTES + 1, METADATA_BYTES);
 			
 			convertSubChunk(chunkY, subChunk);
 		}
