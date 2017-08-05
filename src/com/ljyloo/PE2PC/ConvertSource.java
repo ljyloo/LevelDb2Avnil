@@ -1,9 +1,6 @@
 package com.ljyloo.PE2PC;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 import com.mojang.nbt.CompoundTag;
 import com.mojang.nbt.ListTag;
@@ -58,9 +55,13 @@ class ConvertSource {
 			}
 		}
 		
-		//Create new section
+		//Create new empty section
 		section = new CompoundTag();
 		section.putByte("Y", (byte)(chunkY & 0xFF));
+		section.putByteArray("Blocks", new byte[BLOCKDATA_BYTES]);
+		section.putByteArray("Data", new byte[METADATA_BYTES]);
+		section.putByteArray("SkyLight", new byte[SKYLIGHTDATA_BYTES]);
+		section.putByteArray("BlockLight", new byte[BLOCKLIGHTDATA_BYTES]);
 		
 		sections.add(section);
 		
@@ -107,16 +108,7 @@ class ConvertSource {
 		offset += biomes.length;
 		
 		current.level.putByteArray("Biomes", biomes);
-		
-		/*
-		//Check if something was left
-		if(value.length > offset){
-			int left = value.length - offset;
-			int[] pos = getCurrent();
-			System.out.printf("Chunk at %d, %d \nThere's some data left behind Biomes, length: %d \n",
-					pos[0], pos[1], left);
-		}
-		*/
+
 	}
 	
 	/*
@@ -159,20 +151,10 @@ class ConvertSource {
 		
 		//Light data 
 		// will be recalculated by Minecraft.
-		byte[] skyLight = new byte[SKYLIGHTDATA_BYTES];
-		Arrays.fill(skyLight, (byte)0);
-		byte[] blockLight = new byte[BLOCKLIGHTDATA_BYTES];
-		Arrays.fill(blockLight, (byte)0);
 		
 		//Put tag
 		section.putByteArray("Blocks", block);
 		section.putByteArray("Data", meta.data);
-		section.putByteArray("SkyLight", skyLight);
-		section.putByteArray("BlockLight", blockLight);
-		
-		@SuppressWarnings("unchecked")
-		ListTag<CompoundTag> sections = (ListTag<CompoundTag>)(current.level.getList("Sections"));
-		sections.add(section);
 		
 		current.legacy = false;
 	}
@@ -183,13 +165,44 @@ class ConvertSource {
 		
 		if(!current.legacy) return;
 		
-		for(int chunkY = 0;chunkY < 8;chunkY++){
+		//Get the full chunk data
+		int offset = 0;
+		byte[] oldChunkBlock = new byte[BLOCKDATA_BYTES<<3];
+		System.arraycopy(value, offset, oldChunkBlock, 0, oldChunkBlock.length);
+		offset += oldChunkBlock.length;
+
+		/*
+		byte[] oldChunkMeta = new byte[METADATA_BYTES<<3];
+		System.arraycopy(value, offset, oldChunkMeta, 0, oldChunkMeta.length);
+		offset += oldChunkMeta.length;
+		*/
+		
+		//Converted array and DataLayer
+		byte[] chunkBlock = new byte[BLOCKDATA_BYTES<<3];
+		
+		//Convert full chunk
+		//XZY -> YZX
+		for(int x=0;x<16;x++) {
+			for(int z=0;z<16;z++) {
+				for(int y=0;y<128;y++) {	
+					byte[] b = 
+							UnsharedData.blockFilter(oldChunkBlock[(x*2048)|(z*128)|y], (byte)0);
+						
+					chunkBlock[(y*256) | (z*16) | x] = b[0];
+
+				}
+			}
+		}	
+		
+		//Split
+		for(int chunkY=0;chunkY<8;chunkY++) {
+			byte[] block = new byte[BLOCKDATA_BYTES];
+			System.arraycopy(chunkBlock, BLOCKDATA_BYTES*chunkY, block, 0, BLOCKDATA_BYTES);
 			
 			//find non-air
 			boolean allAir = true;
-			for (int i=0;i<BLOCKDATA_BYTES;i++) {
-				int base = chunkY*BLOCKDATA_BYTES;
-				if(value[base+i] != 0){
+			for(byte b:block) {
+				if(b!=0) {
 					allAir = false;
 					break;
 				}
@@ -197,18 +210,9 @@ class ConvertSource {
 			
 			if(allAir) continue;
 			
-			int size = BLOCKDATA_BYTES + METADATA_BYTES + 1;
-			byte[] subChunk = new byte[size];
+			CompoundTag section = createSectionIfNotExists(chunkY);
+			section.putByteArray("Blocks", block);
 			
-			//Block Data
-			int offset = chunkY*BLOCKDATA_BYTES;
-			System.arraycopy(value, offset, subChunk, 1, BLOCKDATA_BYTES);
-			
-			//Meta Data
-			offset = 8*BLOCKDATA_BYTES+chunkY*METADATA_BYTES;
-			System.arraycopy(value, offset, subChunk, BLOCKDATA_BYTES + 1, METADATA_BYTES);
-			
-			convertSubChunk(chunkY, subChunk);
 		}
 	}
 	
