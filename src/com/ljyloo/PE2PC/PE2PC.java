@@ -74,9 +74,9 @@ public class PE2PC {
 					byte[] key = iterator.peekNext().getKey();
 
 					if(key.length < 10 && key.length > 8 && (key[8] > 44 && key[8]<51)){
-+						if(key[8] > 44 && key[8] < 51) {
-+							int currentX = byteArrayToInt(new byte[]{key[3], key[2], key[1], key[0]});
-+							int currentZ = byteArrayToInt(new byte[]{key[7], key[6], key[5], key[4]});
+						if(key[8] > 44 && key[8] < 51) {
+							int currentX = byteArrayToInt(new byte[]{key[3], key[2], key[1], key[0]});
+							int currentZ = byteArrayToInt(new byte[]{key[7], key[6], key[5], key[4]});
 							
 							cs.setCurrent(currentX, currentZ);
 							
@@ -96,18 +96,15 @@ public class PE2PC {
 								
 								switch (tag){
 									case 45://Data2D
-										System.out.println("Biomes and HeightMap");
 										cs.convertData2D(value);
 										break;
 									case 46://Data2DLegacy
 										break;
 									case 47://SubChunkPrefix
 										if(key.length == 10)
-											System.out.printf("SubChunk %d\n",key[9]);
 											cs.convertSubChunk(key[9], value);
 										break;
 									case 48://LegacyTerrain
-										System.out.println("Legacy chunk");
 										cs.convertLegacyTerrain(value);
 										break;
 									case 49://BlockEntity
