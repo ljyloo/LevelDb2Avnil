@@ -73,7 +73,7 @@ public class PE2PC {
 
 					byte[] key = iterator.peekNext().getKey();
 
-					if(key.length < 10 && key.length > 8 && (key[8] > 44 && key[8]<51)){
+					if(key.length < 10 && key.length > 8){
 						if(key[8] > 44 && key[8] < 51) {
 							int currentX = byteArrayToInt(new byte[]{key[3], key[2], key[1], key[0]});
 							int currentZ = byteArrayToInt(new byte[]{key[7], key[6], key[5], key[4]});
@@ -127,9 +127,9 @@ public class PE2PC {
 							}
 						}
 					}else{
-						System.out.println("\rUnknown Key: \n" + byte2s(key,false));
-						iterator.next();
+						//System.out.println("\rUnknown Key: \n" + byte2s(key,false));
 					}
+					iterator.next();
 				}
 				
 				//Save converted data
