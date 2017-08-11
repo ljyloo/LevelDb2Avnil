@@ -11,10 +11,7 @@ import net.minecraft.world.level.chunk.storage.RegionFile;
 import static org.iq80.leveldb.impl.Iq80DBFactory.*;
 
 import java.io.*;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 public class PE2PC {
 	
@@ -75,59 +72,63 @@ public class PE2PC {
 				while(iterator.hasNext()){
 
 					byte[] key = iterator.peekNext().getKey();
-					
-					if(key.length < 10 && key.length > 7 && (key[8] > 44 && key[8]<51)){
-						int currentX = byteArrayToInt(new byte[]{key[3], key[2], key[1], key[0]});
-						int currentZ = byteArrayToInt(new byte[]{key[7], key[6], key[5], key[4]});
-						
-						cs.setCurrent(currentX, currentZ);
-						
-						for(;iterator.hasNext();iterator.next()){
-							key = iterator.peekNext().getKey();
-							int chunkX = byteArrayToInt(new byte[]{key[3], key[2], key[1], key[0]});
-							int chunkZ = byteArrayToInt(new byte[]{key[7], key[6], key[5], key[4]});
+
+					if(key.length < 10 && key.length > 8){
+						if(key[8] > 44 && key[8] < 51) {
+							int currentX = byteArrayToInt(new byte[]{key[3], key[2], key[1], key[0]});
+							int currentZ = byteArrayToInt(new byte[]{key[7], key[6], key[5], key[4]});
 							
-							if(chunkX != currentX | chunkZ != currentZ){
-								continue Loop1;
-							}
+							cs.setCurrent(currentX, currentZ);
 							
-							System.out.print("\rConverting legacy chunk X: "+chunkX+" Z: "+chunkZ);
-							System.out.flush();
+							System.out.printf("\rConverting chunk %d,%d...\n",currentX,currentZ);
 							
-							byte tag = key[8];
-							byte[] value = iterator.peekNext().getValue();
-							
-							switch (tag){
-								case 45://Data2D
-									cs.convertData2D(value);
-									break;
-								case 46://Data2DLegacy
-									break;
-								case 47://SubChunkPrefix
-									if(key.length == 10)
-										cs.convertSubChunk(key[9], value);
-									break;
-								case 48://LegacyTerrain
-									cs.convertLegacyTerrain(value);
-									break;
-								case 49://BlockEntity
-									break;
-								case 50://Entity
-									break;	
-								case 52://BlockExtraData
-									break;
-								/*
-								 * tag
-								 * - 51 PendingTicks
-								 * - 53 BiomeState
-								 * - 54 FInalizedState
-								 * - 118 Version
-								 * have been excluded.
-								 */
+							for(;iterator.hasNext();iterator.next()){
+								key = iterator.peekNext().getKey();
+								int chunkX = byteArrayToInt(new byte[]{key[3], key[2], key[1], key[0]});
+								int chunkZ = byteArrayToInt(new byte[]{key[7], key[6], key[5], key[4]});
+								
+								if(chunkX != currentX | chunkZ != currentZ){
+									continue Loop1;
+								}
+								
+								byte tag = key[8];
+								byte[] value = iterator.peekNext().getValue();
+								
+								switch (tag){
+									case 45://Data2D
+										cs.convertData2D(value);
+										break;
+									case 46://Data2DLegacy
+										break;
+									case 47://SubChunkPrefix
+										if(key.length == 10)
+											cs.convertSubChunk(key[9], value);
+										break;
+									case 48://LegacyTerrain
+										cs.convertLegacyTerrain(value);
+										break;
+									case 49://BlockEntity
+										break;
+									case 50://Entity
+										cs.convertEntity(value);
+										break;	
+									case 52://BlockExtraData
+										break;
+									/*
+									 * tag
+									 * - 51 PendingTicks
+									 * - 53 BiomeState
+									 * - 54 FInalizedState
+									 * - 118 Version
+									 * have been excluded.
+									 */
+								}
+								System.out.flush();
 							}
 						}
+					}else{
+						//System.out.println("\rUnknown Key: \n" + byte2s(key,false));
 					}
-					System.out.println("\rUnknown Key: \n" + byte2s(key,false) + "\n");
 					iterator.next();
 				}
 				
@@ -204,36 +205,9 @@ public class PE2PC {
 			System.out.println("\nIt seems that the input data does not contain any sub chunk.");
 		}
 	}
-	
-    public static void legacy(File src) throws IOException{
-    	DB db = null;
-    	System.out.println("Reading...");
-		try{
-			Options options = new Options();
-			options.createIfMissing(false);
-			db = factory.open(src, options);
-			
-			DBIterator iterator = db.iterator();
-			
-			for(iterator.seekToFirst(); iterator.hasNext(); iterator.next()){
-				byte[] key = iterator.peekNext().getKey();
-				if (key.length >= 9 && key[8] == 48){
-					System.out.println(byte2s(key, false));
-					System.out.println(iterator.peekNext().getValue().length);
-					break;
-				}
-			}
-		}
-		catch (Exception e) {
-			e.printStackTrace();
-		}
-		finally{
-			db.close();
-		}
-    }
     
 	public static String byte2s(byte[] b, boolean ignoreTooLong){
-		String s = "0x";
+		String s = "";
 		int length = b.length;
 		boolean tooLong = false;
 		if(length > 100){

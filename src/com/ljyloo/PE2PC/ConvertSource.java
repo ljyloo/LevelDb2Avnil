@@ -1,9 +1,6 @@
 package com.ljyloo.PE2PC;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 import com.mojang.nbt.CompoundTag;
 import com.mojang.nbt.ListTag;
@@ -14,8 +11,8 @@ import net.minecraft.world.level.chunk.OldDataLayer;
 class ConvertSource {
 	
 	//Data2D
-	private final static int HEIGHTMAP_BYTES = 512;
-	private final static int BIOMEDATA_BYTES = 256;
+	private final static int HEIGHTMAP_LENGTH = 256;
+	private final static int BIOMEDATA_LENGTH = 256;
 	//SubChunk
 	private final static int DATALAYER_BITS = 4;
 	private final static int BLOCKDATA_BYTES = 4096;
@@ -58,9 +55,13 @@ class ConvertSource {
 			}
 		}
 		
-		//Create new section
+		//Create new empty section
 		section = new CompoundTag();
 		section.putByte("Y", (byte)(chunkY & 0xFF));
+		section.putByteArray("Blocks", new byte[BLOCKDATA_BYTES]);
+		section.putByteArray("Data", new byte[METADATA_BYTES]);
+		section.putByteArray("SkyLight", new byte[SKYLIGHTDATA_BYTES]);
+		section.putByteArray("BlockLight", new byte[BLOCKLIGHTDATA_BYTES]);
 		
 		sections.add(section);
 		
@@ -82,7 +83,7 @@ class ConvertSource {
 			throw new NullPointerException("Set current chunk first.");
 		
 		//Convert HeightMap
-		byte[] heightData = new byte[HEIGHTMAP_BYTES];
+		byte[] heightData = new byte[HEIGHTMAP_LENGTH<<1];
 		
 		int offset = 0;
 		System.arraycopy(value, offset, heightData, 0, heightData.length);
@@ -91,32 +92,21 @@ class ConvertSource {
 		// byte array to int array
 		int[] height = new int[256];
 		
-		int map = HEIGHTMAP_BYTES/(height.length*2);
-		int limit = heightData.length/2;
-		for(int i=0;i<limit;i++){
+		for(int i=0;i<HEIGHTMAP_LENGTH;i++){
 			//(i+1)*2-1 = 2*i+1 (use 2*i , 2*i+1)
-			height[i*map] = heightData[2*i+1]<<8 | heightData[2*i];
+			height[i] = heightData[2*i+1]<<8 | heightData[2*i];
 		}
 		
 		current.level.putIntArray("HeightMap",height);
 		
 		//Convert Biomes
-		byte[] biomes = new byte[BIOMEDATA_BYTES];
+		byte[] biomes = new byte[BIOMEDATA_LENGTH];
 		
 		System.arraycopy(value, offset, biomes, 0, biomes.length);
 		offset += biomes.length;
 		
 		current.level.putByteArray("Biomes", biomes);
-		
-		/*
-		//Check if something was left
-		if(value.length > offset){
-			int left = value.length - offset;
-			int[] pos = getCurrent();
-			System.out.printf("Chunk at %d, %d \nThere's some data left behind Biomes, length: %d \n",
-					pos[0], pos[1], left);
-		}
-		*/
+
 	}
 	
 	/*
@@ -159,20 +149,10 @@ class ConvertSource {
 		
 		//Light data 
 		// will be recalculated by Minecraft.
-		byte[] skyLight = new byte[SKYLIGHTDATA_BYTES];
-		Arrays.fill(skyLight, (byte)0);
-		byte[] blockLight = new byte[BLOCKLIGHTDATA_BYTES];
-		Arrays.fill(blockLight, (byte)0);
 		
 		//Put tag
 		section.putByteArray("Blocks", block);
 		section.putByteArray("Data", meta.data);
-		section.putByteArray("SkyLight", skyLight);
-		section.putByteArray("BlockLight", blockLight);
-		
-		@SuppressWarnings("unchecked")
-		ListTag<CompoundTag> sections = (ListTag<CompoundTag>)(current.level.getList("Sections"));
-		sections.add(section);
 		
 		current.legacy = false;
 	}
@@ -183,13 +163,90 @@ class ConvertSource {
 		
 		if(!current.legacy) return;
 		
-		for(int chunkY = 0;chunkY < 8;chunkY++){
+		//Get the full chunk data
+		byte[][] oldData = {
+				new byte[BLOCKDATA_BYTES<<3],//Block ID
+				new byte[METADATA_BYTES<<3],//Block Data
+				new byte[SKYLIGHTDATA_BYTES<<3],//Sky Light
+				new byte[BLOCKLIGHTDATA_BYTES<<3]//Block Light
+		};
+		
+		int offset = 0;
+		for(byte[] array : oldData) {
+			System.arraycopy(value, offset, array, 0, array.length);
+			offset += array.length;
+		}
+		
+		//Converted array and DataLayer
+		byte[] chunkBlock = new byte[BLOCKDATA_BYTES<<3];
+		byte[] chunkMeta = new byte[METADATA_BYTES<<3];
+		byte[] chunkSkylight = new byte[SKYLIGHTDATA_BYTES<<3];
+		byte[] chunkBlocklight = new byte[BLOCKLIGHTDATA_BYTES<<3];
+		
+		//height map
+		int[] heightData = new int[HEIGHTMAP_LENGTH];
+		
+		//Convert full chunk
+		//XZY -> YZX
+		for(int x=0;x<16;x++) {
+			for(int z=0;z<16;z++) {
+				boolean highest = true;
+				for(int y=127;y>=0;y--) {
+					
+					boolean part = (x%2 == 1);
+					boolean oldPart = (y%2 == 1);
+					int pos = (y<<8) | (z<<4) | x;
+					int oldPos = (x<<11) | (z<<7) | y;
+					
+					//Get nibble Data
+					int meta,skylight,blocklight;
+					if(oldPart) {
+						meta = oldData[1][oldPos/2] >> 4;
+						skylight = oldData[2][oldPos>>1] >> 4;
+						blocklight = oldData[3][oldPos>>1] >> 4;
+					}else {
+						meta = oldData[1][oldPos/2] & 0xf;
+						skylight = oldData[2][oldPos>>1] & 0xf;
+						blocklight = oldData[3][oldPos>>1] & 0xf;
+					}
+					
+					byte[] block = UnsharedData.blockFilter(oldData[0][oldPos], (byte)meta);
+					
+					//Store Nibble Data
+					if(part) {
+						chunkMeta[pos>>1] = (byte)((chunkMeta[pos>>1] & 0x0f) | (block[1] << 4));
+						chunkSkylight[pos>>1] = (byte)((chunkSkylight[pos>>1] & 0x0f) | (skylight << 4));
+						chunkBlocklight[pos>>1] = (byte)((chunkBlocklight[pos>>1] & 0x0f) | (blocklight << 4));
+					}else {
+						chunkMeta[pos>>1] = (byte)((chunkMeta[pos>>1] & 0xf0) | (block[1] & 0x0f));
+						chunkSkylight[pos>>1] = (byte)((chunkSkylight[pos>>1] & 0xf0) | (skylight & 0x0f));
+						chunkBlocklight[pos>>1] = (byte)((chunkBlocklight[pos>>1] & 0xf0) | (blocklight & 0x0f));
+					}
+					
+					//Store Block ID
+					chunkBlock[pos] = block[0];
+					
+					//check highest
+					if(highest) {
+						if(chunkBlock[pos] != 0) {
+							heightData[(x<<4)|z] = y;
+							highest = false;
+						}
+					}
+					
+				}
+			}
+		}
+		
+		//Split
+		for(int chunkY=0;chunkY<8;chunkY++) {
+			byte[] blocks = new byte[BLOCKDATA_BYTES];
+			System.arraycopy(chunkBlock, BLOCKDATA_BYTES*chunkY, blocks, 0, BLOCKDATA_BYTES);
 			
 			//find non-air
 			boolean allAir = true;
-			for (int i=0;i<BLOCKDATA_BYTES;i++) {
-				int base = chunkY*BLOCKDATA_BYTES;
-				if(value[base+i] != 0){
+			for(byte b:blocks) {
+				if(b!=0) {
 					allAir = false;
 					break;
 				}
@@ -197,19 +254,19 @@ class ConvertSource {
 			
 			if(allAir) continue;
 			
-			int size = BLOCKDATA_BYTES + METADATA_BYTES + 1;
-			byte[] subChunk = new byte[size];
+			byte[] meta = Arrays.copyOfRange(chunkMeta, chunkY*METADATA_BYTES, (chunkY+1)*METADATA_BYTES);
+			byte[] skylight = Arrays.copyOfRange(chunkSkylight, chunkY*SKYLIGHTDATA_BYTES, (chunkY+1)*SKYLIGHTDATA_BYTES);
+			byte[] blocklight = Arrays.copyOfRange(chunkSkylight, chunkY*BLOCKLIGHTDATA_BYTES, (chunkY+1)*BLOCKLIGHTDATA_BYTES);
 			
-			//Block Data
-			int offset = chunkY*BLOCKDATA_BYTES;
-			System.arraycopy(value, offset, subChunk, 1, BLOCKDATA_BYTES);
-			
-			//Meta Data
-			offset = 8*BLOCKDATA_BYTES+chunkY*METADATA_BYTES;
-			System.arraycopy(value, offset, subChunk, BLOCKDATA_BYTES + 1, METADATA_BYTES);
-			
-			convertSubChunk(chunkY, subChunk);
+			CompoundTag section = createSectionIfNotExists(chunkY);
+			section.putByteArray("Blocks", blocks);
+			section.putByteArray("Data", meta);
+			section.putByteArray("SkyLight", skylight);
+			section.putByteArray("BlockLight", blocklight);
 		}
+		
+		current.level.putIntArray("HeightMap",heightData);
+		
 	}
 	
 	public void convertData2DLegacy(byte[] value){}
