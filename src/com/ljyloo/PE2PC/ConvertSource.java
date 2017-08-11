@@ -11,8 +11,8 @@ import net.minecraft.world.level.chunk.OldDataLayer;
 class ConvertSource {
 	
 	//Data2D
-	private final static int HEIGHTMAP_BYTES = 512;
-	private final static int BIOMEDATA_BYTES = 256;
+	private final static int HEIGHTMAP_LENGTH = 256;
+	private final static int BIOMEDATA_LENGTH = 256;
 	//SubChunk
 	private final static int DATALAYER_BITS = 4;
 	private final static int BLOCKDATA_BYTES = 4096;
@@ -83,7 +83,7 @@ class ConvertSource {
 			throw new NullPointerException("Set current chunk first.");
 		
 		//Convert HeightMap
-		byte[] heightData = new byte[HEIGHTMAP_BYTES];
+		byte[] heightData = new byte[HEIGHTMAP_LENGTH<<1];
 		
 		int offset = 0;
 		System.arraycopy(value, offset, heightData, 0, heightData.length);
@@ -92,17 +92,15 @@ class ConvertSource {
 		// byte array to int array
 		int[] height = new int[256];
 		
-		int map = HEIGHTMAP_BYTES/(height.length*2);
-		int limit = heightData.length/2;
-		for(int i=0;i<limit;i++){
+		for(int i=0;i<HEIGHTMAP_LENGTH;i++){
 			//(i+1)*2-1 = 2*i+1 (use 2*i , 2*i+1)
-			height[i*map] = heightData[2*i+1]<<8 | heightData[2*i];
+			height[i] = heightData[2*i+1]<<8 | heightData[2*i];
 		}
 		
 		current.level.putIntArray("HeightMap",height);
 		
 		//Convert Biomes
-		byte[] biomes = new byte[BIOMEDATA_BYTES];
+		byte[] biomes = new byte[BIOMEDATA_LENGTH];
 		
 		System.arraycopy(value, offset, biomes, 0, biomes.length);
 		offset += biomes.length;
@@ -185,11 +183,15 @@ class ConvertSource {
 		byte[] chunkSkylight = new byte[SKYLIGHTDATA_BYTES<<3];
 		byte[] chunkBlocklight = new byte[BLOCKLIGHTDATA_BYTES<<3];
 		
+		//height map
+		int[] heightData = new int[HEIGHTMAP_LENGTH];
+		
 		//Convert full chunk
 		//XZY -> YZX
 		for(int x=0;x<16;x++) {
 			for(int z=0;z<16;z++) {
-				for(int y=0;y<128;y++) {
+				boolean highest = true;
+				for(int y=127;y>=0;y--) {
 					
 					boolean part = (x%2 == 1);
 					boolean oldPart = (y%2 == 1);
@@ -224,6 +226,14 @@ class ConvertSource {
 					//Store Block ID
 					chunkBlock[pos] = block[0];
 					
+					//check highest
+					if(highest) {
+						if(chunkBlock[pos] != 0) {
+							heightData[(x<<4)|z] = y;
+							highest = false;
+						}
+					}
+					
 				}
 			}
 		}
@@ -254,7 +264,9 @@ class ConvertSource {
 			section.putByteArray("SkyLight", skylight);
 			section.putByteArray("BlockLight", blocklight);
 		}
-
+		
+		current.level.putIntArray("HeightMap",heightData);
+		
 	}
 	
 	public void convertData2DLegacy(byte[] value){}
