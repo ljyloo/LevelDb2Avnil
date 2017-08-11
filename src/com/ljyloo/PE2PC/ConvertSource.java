@@ -166,42 +166,76 @@ class ConvertSource {
 		if(!current.legacy) return;
 		
 		//Get the full chunk data
+		byte[][] oldData = {
+				new byte[BLOCKDATA_BYTES<<3],//Block ID
+				new byte[METADATA_BYTES<<3],//Block Data
+				new byte[SKYLIGHTDATA_BYTES<<3],//Sky Light
+				new byte[BLOCKLIGHTDATA_BYTES<<3]//Block Light
+		};
+		
 		int offset = 0;
-		byte[] oldChunkBlock = new byte[BLOCKDATA_BYTES<<3];
-		System.arraycopy(value, offset, oldChunkBlock, 0, oldChunkBlock.length);
-		offset += oldChunkBlock.length;
-
-		/*
-		byte[] oldChunkMeta = new byte[METADATA_BYTES<<3];
-		System.arraycopy(value, offset, oldChunkMeta, 0, oldChunkMeta.length);
-		offset += oldChunkMeta.length;
-		*/
+		for(byte[] array : oldData) {
+			System.arraycopy(value, offset, array, 0, array.length);
+			offset += array.length;
+		}
 		
 		//Converted array and DataLayer
 		byte[] chunkBlock = new byte[BLOCKDATA_BYTES<<3];
+		byte[] chunkMeta = new byte[METADATA_BYTES<<3];
+		byte[] chunkSkylight = new byte[SKYLIGHTDATA_BYTES<<3];
+		byte[] chunkBlocklight = new byte[BLOCKLIGHTDATA_BYTES<<3];
 		
 		//Convert full chunk
 		//XZY -> YZX
 		for(int x=0;x<16;x++) {
 			for(int z=0;z<16;z++) {
-				for(int y=0;y<128;y++) {	
-					byte[] b = 
-							UnsharedData.blockFilter(oldChunkBlock[(x*2048)|(z*128)|y], (byte)0);
-						
-					chunkBlock[(y*256) | (z*16) | x] = b[0];
-
+				for(int y=0;y<128;y++) {
+					
+					boolean part = (x%2 == 1);
+					boolean oldPart = (y%2 == 1);
+					int pos = (y<<8) | (z<<4) | x;
+					int oldPos = (x<<11) | (z<<7) | y;
+					
+					//Get nibble Data
+					int meta,skylight,blocklight;
+					if(oldPart) {
+						meta = oldData[1][oldPos/2] >> 4;
+						skylight = oldData[2][oldPos>>1] >> 4;
+						blocklight = oldData[3][oldPos>>1] >> 4;
+					}else {
+						meta = oldData[1][oldPos/2] & 0xf;
+						skylight = oldData[2][oldPos>>1] & 0xf;
+						blocklight = oldData[3][oldPos>>1] & 0xf;
+					}
+					
+					byte[] block = UnsharedData.blockFilter(oldData[0][oldPos], (byte)meta);
+					
+					//Store Nibble Data
+					if(part) {
+						chunkMeta[pos>>1] = (byte)((chunkMeta[pos>>1] & 0x0f) | (block[1] << 4));
+						chunkSkylight[pos>>1] = (byte)((chunkSkylight[pos>>1] & 0x0f) | (skylight << 4));
+						chunkBlocklight[pos>>1] = (byte)((chunkBlocklight[pos>>1] & 0x0f) | (blocklight << 4));
+					}else {
+						chunkMeta[pos>>1] = (byte)((chunkMeta[pos>>1] & 0xf0) | (block[1] & 0x0f));
+						chunkSkylight[pos>>1] = (byte)((chunkSkylight[pos>>1] & 0xf0) | (skylight & 0x0f));
+						chunkBlocklight[pos>>1] = (byte)((chunkBlocklight[pos>>1] & 0xf0) | (blocklight & 0x0f));
+					}
+					
+					//Store Block ID
+					chunkBlock[pos] = block[0];
+					
 				}
 			}
-		}	
+		}
 		
 		//Split
 		for(int chunkY=0;chunkY<8;chunkY++) {
-			byte[] block = new byte[BLOCKDATA_BYTES];
-			System.arraycopy(chunkBlock, BLOCKDATA_BYTES*chunkY, block, 0, BLOCKDATA_BYTES);
+			byte[] blocks = new byte[BLOCKDATA_BYTES];
+			System.arraycopy(chunkBlock, BLOCKDATA_BYTES*chunkY, blocks, 0, BLOCKDATA_BYTES);
 			
 			//find non-air
 			boolean allAir = true;
-			for(byte b:block) {
+			for(byte b:blocks) {
 				if(b!=0) {
 					allAir = false;
 					break;
@@ -210,10 +244,17 @@ class ConvertSource {
 			
 			if(allAir) continue;
 			
-			CompoundTag section = createSectionIfNotExists(chunkY);
-			section.putByteArray("Blocks", block);
+			byte[] meta = Arrays.copyOfRange(chunkMeta, chunkY*METADATA_BYTES, (chunkY+1)*METADATA_BYTES);
+			byte[] skylight = Arrays.copyOfRange(chunkSkylight, chunkY*SKYLIGHTDATA_BYTES, (chunkY+1)*SKYLIGHTDATA_BYTES);
+			byte[] blocklight = Arrays.copyOfRange(chunkSkylight, chunkY*BLOCKLIGHTDATA_BYTES, (chunkY+1)*BLOCKLIGHTDATA_BYTES);
 			
+			CompoundTag section = createSectionIfNotExists(chunkY);
+			section.putByteArray("Blocks", blocks);
+			section.putByteArray("Data", meta);
+			section.putByteArray("SkyLight", skylight);
+			section.putByteArray("BlockLight", blocklight);
 		}
+
 	}
 	
 	public void convertData2DLegacy(byte[] value){}
