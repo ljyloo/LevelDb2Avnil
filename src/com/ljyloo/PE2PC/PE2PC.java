@@ -12,6 +12,7 @@ import static org.iq80.leveldb.impl.Iq80DBFactory.*;
 
 import java.io.*;
 import java.util.*;
+import java.util.Map.Entry;
 
 public class PE2PC {
 	
@@ -68,74 +69,66 @@ public class PE2PC {
 				ConvertSource cs = new ConvertSource();
 				iterator.seekToFirst();
 				
-				Loop1:
-				while(iterator.hasNext()){
-
-					byte[] key = iterator.peekNext().getKey();
-
-					if(key.length == 9){// key for chunk
-						if(key[8] > 44 && key[8] < 51) {
-							int currentX = byteArrayToInt(new byte[]{key[3], key[2], key[1], key[0]});
-							int currentZ = byteArrayToInt(new byte[]{key[7], key[6], key[5], key[4]});
-							
+				while(iterator.hasNext()) {
+					Entry<byte[], byte[]> next = iterator.next();
+					byte[] key = next.getKey();
+					
+					if((key.length > 8 & key.length < 11) && ((key[8]>44&key[8]<55) | key[8]==118)) {//key for chunk
+						
+						int currentX = byteArrayToInt(new byte[]{key[3], key[2], key[1], key[0]});
+						int currentZ = byteArrayToInt(new byte[]{key[7], key[6], key[5], key[4]});
+						
+						Optional<int[]> op = cs.getCurrent();
+						if(!(op.isPresent() && op.get()[0]==currentX && op.get()[1]==currentZ)) {
+							System.out.flush();
+							System.out.printf("Converting chunk %d,%d...\n",currentX,currentZ);
+							//System.out.println(byte2s(key,false));
 							cs.setCurrent(currentX, currentZ);
-							
-							System.out.printf("\rConverting chunk %d,%d...\n",currentX,currentZ);
-							
-							for(;iterator.hasNext();iterator.next()){
-								key = iterator.peekNext().getKey();
-								
-								if(key.length != 9) {
-									continue Loop1;
-								}
-								
-								int chunkX = byteArrayToInt(new byte[]{key[3], key[2], key[1], key[0]});
-								int chunkZ = byteArrayToInt(new byte[]{key[7], key[6], key[5], key[4]});
-								
-								if(chunkX != currentX | chunkZ != currentZ){
-									continue Loop1;
-								}
-								
-								byte tag = key[8];
-								byte[] value = iterator.peekNext().getValue();
-								
-								switch (tag){
-									case 45://Data2D
-										cs.convertData2D(value);
-										break;
-									case 46://Data2DLegacy
-										break;
-									case 47://SubChunkPrefix
-										if(key.length == 10)
-											cs.convertSubChunk(key[9], value);
-										break;
-									case 48://LegacyTerrain
-										cs.convertLegacyTerrain(value);
-										break;
-									case 49://BlockEntity
-										break;
-									case 50://Entity
-										cs.convertEntity(value);
-										break;	
-									case 52://BlockExtraData
-										break;
-									/*
-									 * tag
-									 * - 51 PendingTicks
-									 * - 53 BiomeState
-									 * - 54 FInalizedState
-									 * - 118 Version
-									 * have been excluded.
-									 */
-								}
-								System.out.flush();
-							}
 						}
+						
+						byte tag = key[8];
+						byte[] value = next.getValue();
+						
+						switch (tag){
+							case 45://Data2D
+								System.out.println("Biomes and Heightmap");
+								cs.convertData2D(value);
+								break;
+							case 46://Data2DLegacy
+								break;
+							case 47://SubChunkPrefix
+								System.out.printf("SubChunk...%d\n", key[9]);
+								if(key.length == 10) {
+									cs.convertSubChunk(key[9], value);
+								}else {
+									System.out.println("key[9] doesn't exist");
+								}
+								break;
+							case 48://LegacyTerrain
+								System.out.println("Legacy chunk");
+								cs.convertLegacyTerrain(value);
+								break;
+							case 49://BlockEntity
+								break;
+							case 50://Entity
+								cs.convertEntity(value);
+								break;	
+							case 52://BlockExtraData
+								break;
+							/*
+							 * tag
+							 * - 51 PendingTicks
+							 * - 53 BiomeState
+							 * - 54 FInalizedState
+							 * - 118 Version
+							 * have been excluded.
+							 */
+						}
+						
 					}else{
 						//other key
-						//System.out.println("\rUnknown Key: \n" + byte2s(key,false));
-					}
-					iterator.next();
+						System.out.println("Ignore key: \n"+ byte2s(key,false));
+					}	
 				}
 				
 				//Save converted data
@@ -144,6 +137,7 @@ public class PE2PC {
 				
 				totalChunk = converted.size();
 				
+				System.out.println("\nSaving converted chunks...");
 				while (iter.hasNext()){
 					
 					//Check whether the chunk NBTTag is complete.
@@ -201,14 +195,16 @@ public class PE2PC {
 			}
 		}
 		finally{
-			db.close();
+			if(db != null) {
+				db.close();
+			}
 		}
 
 		if(totalChunk > 0){
-			System.out.println("\nDone! Converted sub chunks: " + totalChunk);
+			System.out.println("\nDone! Converted chunks: " + totalChunk);
 		}
 		else{
-			System.out.println("\nIt seems that the input data does not contain any sub chunk.");
+			System.out.println("Oops! It seems that the input data does not contain any valid chunk.");
 		}
 	}
     
