@@ -277,8 +277,9 @@ class ConvertSource {
 	
 	public void convertSonw(byte[] value){}
 	
-	public int[] getCurrent(){
-		return new int[]{current.level.getInt("xPos"), current.level.getInt("zPos")};
+	public Optional<int[]> getCurrent(){	
+		return current==null ? Optional.empty() : 
+			Optional.of(new int[]{current.level.getInt("xPos"), current.level.getInt("zPos")});
 	}
 	
 	public List<CompoundTag> getConvertedChunks(){
