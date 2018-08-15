@@ -1,3 +1,5 @@
+# THIS PROJECT IS DEPRECATED. YOU ARE WELCOMED TO FORK OR PULL REQUEST, BUT I WILL NOT MAINTAIN THE CODE ANYMORE, SORRY.
+
 # LevelDb2Anvil
 
 Convert **Minecraft: Pocket Edition Maps(_LevelDB_)** to **Minecraft Maps(_Anvil_)**.
